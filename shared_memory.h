@@ -2,7 +2,7 @@
 #define SHARED_MEMORY_H
 
 #include <iostream>
-#include <vector>
+#include <stdexcept>
 #include <cstring>
 
 #ifdef _WIN32

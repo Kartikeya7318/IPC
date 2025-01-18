@@ -1,9 +1,10 @@
 #include "shared_memory.h"
 
-// Constructor
+#ifdef _WIN32
 SharedMemory::SharedMemory(const char* name, size_t size, bool isCreator)
     : name(name), size(size), isCreator(isCreator) {
-#ifdef _WIN32
+    std::string mutexName = std::string(name) + "_mutex";
+
     if (isCreator) {
         // Create a file mapping object
         hMapFile = CreateFileMapping(
@@ -27,11 +28,40 @@ SharedMemory::SharedMemory(const char* name, size_t size, bool isCreator)
     }
 
     // Create or open the mutex for locking
-    hMutex = CreateMutex(nullptr, FALSE, name);
+    hMutex = CreateMutex(nullptr, FALSE, mutexName.c_str());
+    if (hMutex == nullptr && GetLastError() == ERROR_ACCESS_DENIED) {
+        hMutex = OpenMutex(SYNCHRONIZE, FALSE, mutexName.c_str());
+    }
     if (hMutex == nullptr) {
         throw std::runtime_error("Failed to create/open mutex.");
     }
+}
+
+SharedMemory::~SharedMemory() {
+    UnmapViewOfFile(pBuf);
+    CloseHandle(hMapFile);
+    CloseHandle(hMutex);
+}
+
+Data* SharedMemory::getData() {
+    return static_cast<Data*>(pBuf);
+}
+
+void SharedMemory::lock() {
+    DWORD dwWaitResult = WaitForSingleObject(hMutex, INFINITE);
+    if (dwWaitResult != WAIT_OBJECT_0) {
+        throw std::runtime_error("Failed to lock mutex.");
+    }
+}
+
+void SharedMemory::unlock() {
+    if (!ReleaseMutex(hMutex)) {
+        throw std::runtime_error("Failed to release mutex.");
+    }
+}
 #else
+SharedMemory::SharedMemory(const char* name, size_t size, bool isCreator)
+    : name(name), size(size), isCreator(isCreator) {
     int flags = isCreator ? (O_CREAT | O_RDWR) : O_RDWR;
     shm_fd = shm_open(name, flags, 0666);
     if (shm_fd == -1) {
@@ -44,78 +74,49 @@ SharedMemory::SharedMemory(const char* name, size_t size, bool isCreator)
         }
     }
 
-    // Map the shared memory into the process's address space
     shared_mem = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
     if (shared_mem == MAP_FAILED) {
         throw std::runtime_error("Failed to map shared memory.");
     }
 
-    // Open or create a lock file for interprocess locking
     lock_fd = open("/tmp/shared_memory_lock", O_CREAT | O_RDWR, 0666);
     if (lock_fd == -1) {
         throw std::runtime_error("Failed to create/open lock file.");
     }
-#endif
 }
 
-// Destructor
 SharedMemory::~SharedMemory() {
-#ifdef _WIN32
-    UnmapViewOfFile(pBuf);
-    CloseHandle(hMapFile);
-    CloseHandle(hMutex);
-#else
     munmap(shared_mem, size);
     close(lock_fd);
     if (isCreator) {
         shm_unlink(name);
         unlink("/tmp/shared_memory_lock");
     }
-#endif
 }
 
-// Get the data pointer
 Data* SharedMemory::getData() {
-#ifdef _WIN32
-    return static_cast<Data*>(pBuf);
-#else
     return static_cast<Data*>(shared_mem);
-#endif
 }
 
-// Lock the shared memory
 void SharedMemory::lock() {
-#ifdef _WIN32
-    DWORD dwWaitResult = WaitForSingleObject(hMutex, INFINITE);
-    if (dwWaitResult != WAIT_OBJECT_0) {
-        throw std::runtime_error("Failed to lock mutex.");
-    }
-#else
     struct flock fl;
     memset(&fl, 0, sizeof(fl));
-    fl.l_type = F_WRLCK;  // Write lock
+    fl.l_type = F_WRLCK;
     fl.l_whence = SEEK_SET;
 
     if (fcntl(lock_fd, F_SETLKW, &fl) == -1) {
         throw std::runtime_error("Failed to acquire lock.");
     }
-#endif
 }
 
-// Unlock the shared memory
 void SharedMemory::unlock() {
-#ifdef _WIN32
-    if (!ReleaseMutex(hMutex)) {
-        throw std::runtime_error("Failed to release mutex.");
-    }
-#else
     struct flock fl;
     memset(&fl, 0, sizeof(fl));
-    fl.l_type = F_UNLCK;  // Unlock
-    fl.l_whence = SEEK_SET;
+    fl.l_type = F_UNLCK;
+    fl.whence = SEEK_SET;
 
     if (fcntl(lock_fd, F_SETLK, &fl) == -1) {
         throw std::runtime_error("Failed to release lock.");
     }
-#endif
 }
+#endif
