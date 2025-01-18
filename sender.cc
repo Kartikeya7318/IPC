@@ -1,6 +1,7 @@
 #include "shared_memory.h"
 #include <thread>
 #include <chrono>
+#include <ctime>
 
 int main() {
     try {
@@ -13,12 +14,16 @@ int main() {
             for (int i = 0; i < 10; ++i) {
                 data->values[i] = counter + i;
             }
+            auto epoch_time = std::chrono::system_clock::now();
+            data->time=static_cast<long>(std::chrono::duration_cast<std::chrono::milliseconds>(epoch_time.time_since_epoch()).count());
+
             shm.unlockSender();  // Unlock after writing
 
-            std::cout << "Sent: ";
+            std::cout << "Sent: Data: ";
             for (float val : data->values) {
                 std::cout << val << " ";
             }
+            std::cout<< "Time: " << data->time;
             std::cout << std::endl;
 
             counter += 1.0f;

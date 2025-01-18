@@ -18,6 +18,7 @@
 // Define a shared data structure
 struct Data {
     float values[10];
+    long time;
 };
 
 class SharedMemory {

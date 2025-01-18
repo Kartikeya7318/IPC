@@ -9,10 +9,11 @@ int main() {
 
         while (true) {
             shm.lockReceiver();  // Lock before reading
-            std::cout << "Received: ";
+            std::cout << "Received: Data: ";
             for (float val : data->values) {
                 std::cout << val << " ";
             }
+            std::cout<< "Time: " << data->time;
             std::cout << std::endl;
             shm.unlockReceiver();  // Unlock after reading
 
