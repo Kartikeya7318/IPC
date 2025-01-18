@@ -9,11 +9,11 @@ int main() {
 
         float counter = 0.0f;
         while (true) {
-            shm.lock();  // Lock before writing
+            shm.lockSender();  // Lock before writing
             for (int i = 0; i < 10; ++i) {
                 data->values[i] = counter + i;
             }
-            shm.unlock();  // Unlock after writing
+            shm.unlockSender();  // Unlock after writing
 
             std::cout << "Sent: ";
             for (float val : data->values) {

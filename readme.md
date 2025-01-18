@@ -1,9 +1,10 @@
 Shared Memory Inter-Process Communication (IPC) Example
 
 Linux
-
-g++ -o sender sender.cc shared_memory.cc -lpthread
-g++ -o receiver receiver.cc shared_memory.cc -lpthread
+mkdir build
+cd build
+cmake ..
+make
 
 Run:
 Open two terminals:
@@ -19,6 +20,10 @@ Terminal 2: Start the receiver process:
 Windows
 
 "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+mkdir build
+cd build
+cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release
+ninja
 
-cl /EHsc sender.cc shared_memory.cc
-cl /EHsc receiver.cc shared_memory.cc
+
+

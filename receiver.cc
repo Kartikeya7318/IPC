@@ -8,15 +8,15 @@ int main() {
         Data* data = shm.getData();
 
         while (true) {
-            shm.lock();  // Lock before reading
+            shm.lockReceiver();  // Lock before reading
             std::cout << "Received: ";
             for (float val : data->values) {
                 std::cout << val << " ";
             }
             std::cout << std::endl;
-            shm.unlock();  // Unlock after reading
+            shm.unlockReceiver();  // Unlock after reading
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

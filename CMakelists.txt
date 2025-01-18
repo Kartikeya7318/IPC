@@ -1,0 +1,43 @@
+# Minimum CMake version
+cmake_minimum_required(VERSION 3.10)
+
+# Project name
+project(SharedMemoryProject)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+# Add shared_memory library (Static Library)
+add_library(shared_memory STATIC
+    shared_memory.cc
+    shared_memory.h
+)
+
+# Platform-specific configurations for shared_memory library
+if(WIN32)
+    target_link_libraries(shared_memory ws2_32)  # Link Windows sockets library
+else()
+    target_link_libraries(shared_memory pthread)  # Link pthread on Linux/Unix
+endif()
+
+# Include directories for shared_memory library
+target_include_directories(shared_memory PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+# Define sender executable
+add_executable(sender sender.cc)
+
+# Link the shared_memory library to sender executable
+target_link_libraries(sender PRIVATE shared_memory)
+
+# Include directories for sender executable
+target_include_directories(sender PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+# Define receiver executable
+add_executable(receiver receiver.cc)
+
+# Link the shared_memory library to receiver executable
+target_link_libraries(receiver PRIVATE shared_memory)
+
+# Include directories for receiver executable
+target_include_directories(receiver PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

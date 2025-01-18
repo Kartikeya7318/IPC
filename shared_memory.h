@@ -2,7 +2,7 @@
 #define SHARED_MEMORY_H
 
 #include <iostream>
-#include <stdexcept>
+#include <vector>
 #include <cstring>
 
 #ifdef _WIN32
@@ -26,8 +26,10 @@ public:
     ~SharedMemory();
     Data* getData();
 
-    void lock();
-    void unlock();
+    void lockSender();
+    void lockReceiver();
+    void unlockSender();
+    void unlockReceiver();
 
 private:
     const char* name;
@@ -37,12 +39,14 @@ private:
 #ifdef _WIN32
     HANDLE hMapFile;
     LPVOID pBuf;
-    HANDLE hMutex;  // Handle for mutex
+    HANDLE hMutexSender;  // Handle for sender mutex
+    HANDLE hMutexReceiver;  // Handle for receiver mutex
 #else
     int shm_fd;
     void* shared_mem;
-    int lock_fd;    // File descriptor for locking
+    int lock_fd_sender;    // File descriptor for sender locking
+    int lock_fd_receiver;  // File descriptor for receiver locking
 #endif
 };
 
-#endif
+#endif // SHARED_MEMORY_H
